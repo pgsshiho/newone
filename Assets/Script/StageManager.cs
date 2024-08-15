@@ -14,6 +14,7 @@ public class StageManager : MonoBehaviour
     public GameObject RE;
     public GameObject Bm;
     public GameObject QU;
+    public GameObject panel;
     public int dia; // 다이아몬드 수
     public TextMeshProUGUI diacount; // 다이아몬드 수를 표시할 UI
     private RectTransform diacountParent; // TextMeshProUGUI의 부모 RectTransform
@@ -30,7 +31,20 @@ public class StageManager : MonoBehaviour
         {
             Destroy(gameObject);
         }
+
         dia = 0;
+    }
+
+    private void OnEnable()
+    {
+        SceneManager.sceneLoaded += OnSceneLoaded;
+        SceneManager.sceneUnloaded += OnSceneUnloaded;
+    }
+
+    private void OnDisable()
+    {
+        SceneManager.sceneLoaded -= OnSceneLoaded;
+        SceneManager.sceneUnloaded -= OnSceneUnloaded;
     }
 
     void Start()
@@ -39,6 +53,7 @@ public class StageManager : MonoBehaviour
         if (Settingpanel != null)
         {
             Settingpanel.SetActive(false); // 패널을 시작 시 비활성화합니다.
+            panel.SetActive(false);
         }
         if (diacount != null)
         {
@@ -77,6 +92,7 @@ public class StageManager : MonoBehaviour
                 if (Settingpanel != null)
                 {
                     Settingpanel.SetActive(true); // 패널을 활성화합니다.
+                    panel.SetActive(true);
                 }
             }
             else
@@ -85,6 +101,7 @@ public class StageManager : MonoBehaviour
                 if (Settingpanel != null)
                 {
                     Settingpanel.SetActive(false); // 패널을 비활성화합니다.
+                    panel.SetActive(false);
                 }
                 Cursor.visible = false;
             }
@@ -122,6 +139,7 @@ public class StageManager : MonoBehaviour
     public void Re()
     {
         Settingpanel.gameObject.SetActive(false);
+        panel.gameObject.SetActive(false);
         Time.timeScale = 1;
         Cursor.visible = false; // 마우스 커서 숨김
     }
@@ -141,5 +159,15 @@ public class StageManager : MonoBehaviour
                 diacountParent.anchoredPosition = new Vector2(initialPosition.x - offset - 20, initialPosition.y);
             }
         }
+    }
+
+    // 씬이 로드될 때 호출되는 메서드
+    private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+    {
+    }
+
+    // 씬이 언로드될 때 호출되는 메서드
+    private void OnSceneUnloaded(Scene scene)
+    {
     }
 }

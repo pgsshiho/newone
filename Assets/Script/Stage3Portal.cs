@@ -1,9 +1,11 @@
+using TMPro;
 using UnityEngine;
 
 public class Stage3Portal : MonoBehaviour
 {
     public GameObject Stage3;
     public GameObject shop; // Shop 오브젝트를 직접 할당
+    public TextMeshProUGUI timers;
     private Timer timer; // Timer 인스턴스
     private bool isPlayerInRange = false;
     private bool stageChanged = false;
@@ -21,7 +23,7 @@ public class Stage3Portal : MonoBehaviour
         timer = FindObjectOfType<Timer>();
         if (timer != null)
         {
-            timer.OnTimerEnd += OnTimerEnd; // 타이머 종료 시 Shop 활성화 이벤트 등록
+            timer.OnTimerEnd += OnTimerEnd; // 타이머 종료 시 이벤트 등록
         }
     }
 
@@ -45,6 +47,9 @@ public class Stage3Portal : MonoBehaviour
             {
                 shop.SetActive(false);
             }
+
+            // Stage3 활성화 처리
+            HandleStageTransition();
         }
     }
 
@@ -60,7 +65,9 @@ public class Stage3Portal : MonoBehaviour
     {
         if (timer != null)
         {
-            timer.PauseTimer(); // 타이머 일시정지
+            timer.ResetTimer(10f); // 타이머 리셋
+            timer.StartTimer(); // 타이머 시작
+            timers.gameObject.SetActive(true);
         }
 
         TransitionToStage(Stage3);
@@ -71,12 +78,6 @@ public class Stage3Portal : MonoBehaviour
         Debug.Log("Activating Stage 3");
         nextStage.SetActive(true); // Stage 3 활성화
         stageChanged = true; // 스테이지 변경 완료
-
-        if (timer != null)
-        {
-            timer.ResetTimer(10f);
-            timer.StartTimer(); // 타이머 시작
-        }
     }
 
     private void OnTimerEnd()
@@ -88,11 +89,6 @@ public class Stage3Portal : MonoBehaviour
         if (shop != null)
         {
             shop.SetActive(true); // Shop 활성화
-        }
-
-        if (timer != null)
-        {
-            timer.PauseTimer(); // 타이머 일시정지
         }
 
         stageChanged = false;

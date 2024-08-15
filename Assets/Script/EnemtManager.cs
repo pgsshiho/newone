@@ -2,7 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class EnemyManager1 : MonoBehaviour
+public class EnemtManager : MonoBehaviour
 {
     public GameObject enemyPrefab; // 적 프리팹
     public Transform leftSpawnPoint; // 적이 왼쪽에서 생성될 위치
