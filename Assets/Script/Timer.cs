@@ -1,67 +1,92 @@
 using TMPro;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using System;
 
 public class Timer : MonoBehaviour
 {
-    public TextMeshProUGUI timerText;
-    public GameObject[] stages;    // 모든 스테이지 오브젝트들을 배열로 관리
-    public GameObject[] shops;     // 모든 상점 오브젝트들을 배열로 관리
-    public TextMeshProUGUI enemyCountText; // 적의 수를 나타내는 텍스트
-    public Transform playerTransform; // 플레이어의 Transform 컴포넌트
+    public static Timer Instance; // 싱글턴 인스턴스
 
-    private int currentStageIndex = 0;  // 현재 스테이지의 인덱스
-    private int currentShopIndex = 0;   // 현재 상점의 인덱스
+    public TextMeshProUGUI timerText;
+    public GameObject[] stages;
+    public GameObject[] shops;
+    public TextMeshProUGUI enemyCountText;
+    public Transform playerTransform;
+    public GameObject boss;
+
+    private int currentStageIndex = 0;
+    private int currentShopIndex = 0;
     private float timeRemaining = 10f;
     private bool timerEnded = false;
-    private bool isPaused = false;
+    private bool isPaused = true; // 기본적으로 타이머가 일시정지 상태로 시작
 
-    public Action OnTimerEnd; // 타이머가 끝났을 때 실행될 이벤트
+    public Action OnTimerEnd;
 
     public bool TimerEnded
     {
         get { return timerEnded; }
     }
 
-    void Start()
+    void Awake()
     {
+        // 씬 전환 시 타이머가 없어지도록 하기 위해 싱글턴 패턴 제거
+        // DontDestroyOnLoad(gameObject); 제거
+
+        if (Instance == null)
+        {
+            Instance = this;
+        }
+        else if (Instance != this)
+        {
+            Destroy(gameObject);
+            return;
+        }
+
         if (timerText != null)
         {
             UpdateTimerDisplay();
         }
 
+        // 씬 로드 이벤트 등록
+        SceneManager.sceneLoaded += OnSceneLoaded;
+
         StartTimer(); // 타이머 시작
+    }
+
+    void OnDestroy()
+    {
+        // 씬 로드 이벤트 해제
+        SceneManager.sceneLoaded -= OnSceneLoaded;
     }
 
     void Update()
     {
-        if (isPaused)
+        // 타이머가 일시정지 상태가 아니고 보스가 활성화되어 있지 않으면 타이머 갱신
+        if (!isPaused && (boss == null || !boss.activeSelf))
         {
-            return; // 타이머가 일시정지된 상태라면 Update를 진행하지 않음
-        }
-
-        if (timeRemaining > 0)
-        {
-            timeRemaining -= Time.deltaTime;
-            if (timeRemaining <= 0)
+            if (timeRemaining > 0)
             {
-                timeRemaining = 0;
-                timerEnded = true;
+                timeRemaining -= Time.deltaTime;
+                if (timeRemaining <= 0)
+                {
+                    timeRemaining = 0;
+                    timerEnded = true;
 
-                timerText?.gameObject.SetActive(false);
+                    timerText?.gameObject.SetActive(false);
 
-                OnTimerEnd?.Invoke(); // 타이머 종료 시 등록된 이벤트 실행
+                    OnTimerEnd?.Invoke();
 
-                DestroyAllEnemies(); // 모든 적을 제거하고 적 카운트를 0으로 설정
-                MovePlayerToOrigin(); // 플레이어를 (0,0)으로 이동
-                GoToShop(); // 타이머가 0이 되면 스테이지를 비활성화하고 해당 샵을 활성화
+                    DestroyAllEnemies();
+                    MovePlayerToOrigin();
+                    GoToShop();
 
-                ResetTimer(10f); // 타이머 자동 리셋 및 시작
-            }
+                    PauseTimer(); // 타이머 멈춤
+                }
 
-            if (timerText != null)
-            {
-                UpdateTimerDisplay();
+                if (timerText != null)
+                {
+                    UpdateTimerDisplay();
+                }
             }
         }
     }
@@ -70,11 +95,7 @@ public class Timer : MonoBehaviour
     {
         timeRemaining = newTime;
         timerEnded = false;
-        if (timerText != null)
-        {
-            timerText.gameObject.SetActive(true);
-            UpdateTimerDisplay();
-        }
+        StartTimer(); // 타이머를 리셋한 후 자동으로 시작되도록 함
     }
 
     public void StartTimer()
@@ -103,13 +124,11 @@ public class Timer : MonoBehaviour
 
     private void GoToShop()
     {
-        // 현재 스테이지 비활성화
         if (currentStageIndex < stages.Length)
         {
             stages[currentStageIndex].SetActive(false);
         }
 
-        // 다음 스테이지를 활성화
         currentStageIndex++;
         if (currentStageIndex < stages.Length)
         {
@@ -120,13 +139,11 @@ public class Timer : MonoBehaviour
             Debug.LogError("No more stages left to activate.");
         }
 
-        // 모든 상점을 비활성화
         foreach (var shop in shops)
         {
             shop.SetActive(false);
         }
 
-        // 다음 상점을 활성화
         if (currentShopIndex < shops.Length)
         {
             shops[currentShopIndex].SetActive(true);
@@ -142,14 +159,12 @@ public class Timer : MonoBehaviour
     {
         int enemyLayer = LayerMask.NameToLayer("Enemy");
         GameObject[] allObjects = GameObject.FindObjectsOfType<GameObject>();
-        int enemyCount = 0;
 
         foreach (var obj in allObjects)
         {
             if (obj.layer == enemyLayer)
             {
                 Destroy(obj);
-                enemyCount++;
             }
         }
 
@@ -163,11 +178,21 @@ public class Timer : MonoBehaviour
     {
         if (playerTransform != null)
         {
-            playerTransform.position = Vector3.zero;
+            playerTransform.position = new Vector2(0, 0);
         }
         else
         {
             Debug.LogError("Player Transform is not assigned!");
+        }
+    }
+
+    // 씬이 로드될 때 호출되는 메서드
+    private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+    {
+        // 타이머가 포함된 씬에 돌아왔을 때 타이머를 다시 시작
+        if (scene.name == "YourSceneName") // 타이머가 존재하는 씬 이름으로 대체
+        {
+            ResetTimer(10f); // 타이머를 다시 설정하고 시작
         }
     }
 }
